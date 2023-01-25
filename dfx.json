@@ -1,21 +1,8 @@
 {
   "canisters": {
-    "registry_backend": {
-      "main": "src/registry_backend/main.mo",
+    "registry": {
+      "main": "src/registry/main.mo",
       "type": "motoko"
-    },
-    "registry_frontend": {
-      "dependencies": [
-        "registry_backend"
-      ],
-      "frontend": {
-        "entrypoint": "src/registry_frontend/src/index.html"
-      },
-      "source": [
-        "src/registry_frontend/assets",
-        "dist/registry_frontend/"
-      ],
-      "type": "assets"
     }
   },
   "defaults": {
