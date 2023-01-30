@@ -20,7 +20,7 @@ import Dao "./models/Dao";
 import Result "./models/Result";
 import Cycles "mo:base/ExperimentalCycles";
 import Error "mo:base/Error";
-
+import Constants "./Constants";
 actor {
 
   private type Dao = Dao.Dao;
@@ -36,6 +36,18 @@ actor {
 
   system func postupgrade() {
     daoEntries := [];
+  };
+
+  public query func exist(value:Text): async Bool {
+    let exist = daos.get(value);
+    switch(exist){
+      case(?exist){
+        true
+      };
+      case(null){
+        false
+      }
+    };
   };
 
   public shared({caller}) func setName(value:Text): async Result {
@@ -64,10 +76,11 @@ actor {
   };
 
   public shared({caller}) func addDao(value:Dao): async Result {
+    let composerCanister = Principal.fromText(Constants.composerCanister);
+    assert(caller == composerCanister);
     let exist = daos.get(value.name);
     switch(exist){
       case(?exist){
-        if(exist.owner != caller) return #Err(#Unauthorized);
         let dao ={
             owner = exist.owner;
             name = exist.name;
