@@ -50,6 +50,10 @@ actor {
     };
   };
 
+  public query func fetchDaos(): async [Dao] {
+    _fetchDaos();
+  };
+
   public shared({caller}) func setName(value:Text): async Result {
     let exist = daos.get(value);
     switch(exist){
@@ -102,7 +106,7 @@ actor {
     };
   };
 
-  private func fetchDaos(): [Dao] {
+  private func _fetchDaos(): [Dao] {
     var _daos:[Dao] = [];
     for((key,value) in daos.entries()){
       _daos := Array.append(_daos,[value]);
@@ -151,7 +155,7 @@ actor {
     };
 
     private func _fetchDaoResponse() : Http.Response {
-      let _does =  fetchDaos();
+      let _does =  _fetchDaos();
       var result:[JSON] = [];
 
       for(obj in _does.vals()) {
