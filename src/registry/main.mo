@@ -21,16 +21,18 @@ import Result "./models/Result";
 import Cycles "mo:base/ExperimentalCycles";
 import Error "mo:base/Error";
 import Constants "./Constants";
+import DatabaseService "services/DatabaseService";
+
 actor {
 
   private type Dao = Dao.Dao;
   private type JSON = JSON.JSON;
   private type Result = Result.Result;
 
-  private stable var daoEntries : [(Text,Dao)] = [];
-  private var daos = HashMap.fromIter<Text,Dao>(daoEntries.vals(), 0, Text.equal, Text.hash);
+  private stable var daoEntries : [(Text, Dao)] = [];
+  private var daos = HashMap.fromIter<Text, Dao>(daoEntries.vals(), 0, Text.equal, Text.hash);
 
-   system func preupgrade() {
+  system func preupgrade() {
     daoEntries := Iter.toArray(daos.entries());
   };
 
@@ -38,157 +40,163 @@ actor {
     daoEntries := [];
   };
 
-  public query func exist(value:Text): async Bool {
+  public query func exist(value : Text) : async Bool {
     let exist = daos.get(value);
-    switch(exist){
-      case(?exist){
-        true
+    switch (exist) {
+      case (?exist) {
+        true;
       };
-      case(null){
-        false
-      }
+      case (null) {
+        false;
+      };
     };
   };
 
-  public query func fetchDaos(): async [Dao] {
+  public query func fetchDaos() : async [Dao] {
     _fetchDaos();
   };
 
-  public shared({caller}) func setName(value:Text): async Result {
+  public shared ({ caller }) func setName(value : Text) : async Result {
     let exist = daos.get(value);
-    switch(exist){
-      case(?exist){
+    switch (exist) {
+      case (?exist) {
         #Err(#Unauthorized);
       };
-      case(null){
-        let dao ={
-            owner = caller;
-            name = value;
-            dao = "";
-            database = "";
-            multisig = "";
-            swap = "";
-            token = "";
-            topup = "";
-            treasury = "";
-            vesting = "";
+      case (null) {
+        let dao = {
+          owner = caller;
+          name = value;
+          dao = "";
+          database = "";
+          multisig = "";
+          swap = "";
+          token = "";
+          topup = "";
+          treasury = "";
+          vesting = "";
         };
-        daos.put(value,dao);
-        #Ok("Success")
-      }
-    };
-  };
-
-  public shared({caller}) func addDao(value:Dao): async Result {
-    let composerCanister = Principal.fromText(Constants.composerCanister);
-    assert(caller == composerCanister);
-    let exist = daos.get(value.name);
-    switch(exist){
-      case(?exist){
-        let dao ={
-            owner = exist.owner;
-            name = exist.name;
-            dao = value.dao;
-            database = value.database;
-            multisig = value.multisig;
-            swap = value.swap;
-            token = value.token;
-            topup = value.topup;
-            treasury = value.treasury;
-            vesting = value.vesting;
-        };
-        daos.put(exist.name,dao);
-        #Ok("Success")
+        daos.put(value, dao);
+        #Ok("Success");
       };
-      case(null){
-        #Err(#NotFound);
-      }
     };
   };
 
-  private func _fetchDaos(): [Dao] {
-    var _daos:[Dao] = [];
-    for((key,value) in daos.entries()){
-      _daos := Array.append(_daos,[value]);
+  public shared ({ caller }) func addDao(value : Dao) : async Result {
+    let composerCanister = Principal.fromText(Constants.composerCanister);
+    assert (caller == composerCanister);
+    let exist = daos.get(value.name);
+    switch (exist) {
+      case (?exist) {
+        let dao = {
+          owner = exist.owner;
+          name = exist.name;
+          dao = value.dao;
+          database = value.database;
+          multisig = value.multisig;
+          swap = value.swap;
+          token = value.token;
+          topup = value.topup;
+          treasury = value.treasury;
+          vesting = value.vesting;
+        };
+        try {
+          let _ = await DatabaseService.createCollectionServiceCanisterByGroup(value.token);
+          daos.put(exist.name, dao);
+          #Ok("Success");
+        } catch (e) {
+          throw (e);
+        };
+
+      };
+      case (null) {
+        #Err(#NotFound);
+      };
     };
-    _daos
+  };
+
+  private func _fetchDaos() : [Dao] {
+    var _daos : [Dao] = [];
+    for ((key, value) in daos.entries()) {
+      _daos := Array.append(_daos, [value]);
+    };
+    _daos;
   };
 
   public query func http_request(request : Http.Request) : async Http.Response {
-        let path = Iter.toArray(Text.tokens(request.url, #text("/")));
+    let path = Iter.toArray(Text.tokens(request.url, #text("/")));
 
-        if (path.size() == 1) {
-            switch (path[0]) {
-                case ("fetchDaos") return _fetchDaoResponse();
-                case (_) return Http.BAD_REQUEST();
-            };
-        } else if (path.size() == 2) {
-            switch (path[0]) {
-                case ("dao") return _daoResponse(path[1]);
-                case (_) return Http.BAD_REQUEST();
-            };
-        }else {
-            return Http.BAD_REQUEST();
-        };
+    if (path.size() == 1) {
+      switch (path[0]) {
+        case ("fetchDaos") return _fetchDaoResponse();
+        case (_) return Http.BAD_REQUEST();
+      };
+    } else if (path.size() == 2) {
+      switch (path[0]) {
+        case ("dao") return _daoResponse(path[1]);
+        case (_) return Http.BAD_REQUEST();
+      };
+    } else {
+      return Http.BAD_REQUEST();
+    };
+  };
+
+  private func _natResponse(value : Nat) : Http.Response {
+    let json = #Number(value);
+    let blob = Text.encodeUtf8(JSON.show(json));
+    let response : Http.Response = {
+      status_code = 200;
+      headers = [("Content-Type", "application/json")];
+      body = blob;
+      streaming_strategy = null;
+    };
+  };
+
+  private func _textResponse(value : Text) : Http.Response {
+    let json = #String(value);
+    let blob = Text.encodeUtf8(JSON.show(json));
+    let response : Http.Response = {
+      status_code = 200;
+      headers = [("Content-Type", "application/json")];
+      body = blob;
+      streaming_strategy = null;
+    };
+  };
+
+  private func _fetchDaoResponse() : Http.Response {
+    let _does = _fetchDaos();
+    var result : [JSON] = [];
+
+    for (obj in _does.vals()) {
+      let json = Utils._daoToJson(obj);
+      result := Array.append(result, [json]);
     };
 
-    private func _natResponse(value : Nat): Http.Response {
-        let json = #Number(value);
-        let blob = Text.encodeUtf8(JSON.show(json));
-        let response: Http.Response = {
-            status_code        = 200;
-            headers            = [("Content-Type", "application/json")];
-            body               = blob;
-            streaming_strategy = null;
-        };
+    let json = #Array(result);
+    let blob = Text.encodeUtf8(JSON.show(json));
+    let response : Http.Response = {
+      status_code = 200;
+      headers = [("Content-Type", "application/json")];
+      body = blob;
+      streaming_strategy = null;
     };
+  };
 
-    private func _textResponse(value : Text) : Http.Response {
-        let json = #String(value);
+  private func _daoResponse(value : Text) : Http.Response {
+    let exist = daos.get(value);
+    switch (exist) {
+      case (?exist) {
+        let json = Utils._daoToJson(exist);
         let blob = Text.encodeUtf8(JSON.show(json));
         let response : Http.Response = {
-            status_code = 200;
-            headers = [("Content-Type", "application/json")];
-            body = blob;
-            streaming_strategy = null;
-        };
-    };
-
-    private func _fetchDaoResponse() : Http.Response {
-      let _does =  _fetchDaos();
-      var result:[JSON] = [];
-
-      for(obj in _does.vals()) {
-        let json = Utils._daoToJson(obj);
-        result := Array.append(result,[json]);
-      };
-
-      let json = #Array(result);
-      let blob = Text.encodeUtf8(JSON.show(json));
-      let response : Http.Response = {
           status_code = 200;
           headers = [("Content-Type", "application/json")];
           body = blob;
           streaming_strategy = null;
-      };
-    };
-
-    private func _daoResponse(value:Text) : Http.Response {
-      let exist = daos.get(value);
-      switch(exist){
-        case(?exist){
-          let json = Utils._daoToJson(exist);
-          let blob = Text.encodeUtf8(JSON.show(json));
-          let response : Http.Response = {
-              status_code = 200;
-              headers = [("Content-Type", "application/json")];
-              body = blob;
-              streaming_strategy = null;
-          };
-        };
-        case(null){
-          return Http.NOT_FOUND();
         };
       };
+      case (null) {
+        return Http.NOT_FOUND();
+      };
     };
+  };
 };
