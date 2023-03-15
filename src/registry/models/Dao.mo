@@ -3,13 +3,9 @@ module {
     public type Dao = {
         owner:Principal;
         name:Text;
-        dao:Text;
+        governace:Text;
         database:Text;
-        multisig:Text;
-        swap:Text;
         token:Text;
-        topup:Text;
         treasury:Text;
-        vesting:Text;
     };
 }

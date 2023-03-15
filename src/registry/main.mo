@@ -66,14 +66,10 @@ actor {
         let dao = {
           owner = caller;
           name = value;
-          dao = "";
+          governace = "";
           database = "";
-          multisig = "";
-          swap = "";
           token = "";
-          topup = "";
           treasury = "";
-          vesting = "";
         };
         daos.put(value, dao);
         #Ok("Success");
@@ -90,14 +86,10 @@ actor {
         let dao = {
           owner = exist.owner;
           name = exist.name;
-          dao = value.dao;
+          governace = value.governace;
           database = value.database;
-          multisig = value.multisig;
-          swap = value.swap;
           token = value.token;
-          topup = value.topup;
           treasury = value.treasury;
-          vesting = value.vesting;
         };
         try {
           let _ = await DatabaseService.createCollectionServiceCanisterByGroup(value.token);

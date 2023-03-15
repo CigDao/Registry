@@ -109,15 +109,10 @@ module {
         );
         map.put("owner", #String(Principal.toText(value.owner)));
         map.put("name", #String(value.name));
-        map.put("dao", #String(value.dao));
+        map.put("governace", #String(value.governace));
         map.put("database",#String(value.database));
-        map.put("multisig", #String(value.multisig));
-        map.put("swap", #String(value.swap));
         map.put("token", #String(value.token));
-        map.put("topup", #String(value.topup));
         map.put("treasury", #String(value.treasury));
-        map.put("vesting", #String(value.vesting));
-
         #Object(map);
     };
 
